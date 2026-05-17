@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joseph Omondi | Environmental Visual Storyteller</title>
+    <meta name="description" content="Joseph Omondi is an Environmental Visual Storyteller and GIS & Climate Media specialist based in Nairobi, Kenya.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0c;
+            --text-main: #f0eee9;
+            --text-muted: #8c8b88;
+            --accent: #C4622D; /* Terrain Amber */
+            --border-color: rgba(240, 238, 233, 0.12);
+            --card-bg: #141413;
+            --nav-bg: rgba(13, 13, 12, 0.95);
+            
+            --font-display: 'DM Serif Display', serif;
+            --font-mono: 'DM Mono', monospace;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Subtle Map Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(var(--border-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 60px 60px;
+            background-position: center center;
+            opacity: 0.5;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        /* Topographic Contours (Animated) */
+        .contour-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            z-index: -2;
+            opacity: 0.2;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* Interactive Spotlight Effect */
+        #bg-spotlight {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(
+                800px circle at var(--x, 50%) var(--y, 50%), 
+                rgba(196, 98, 45, 0.08), 
+                transparent 80%
+            );
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        body:hover #bg-spotlight {
+            opacity: 1;
+        }
+
+        .contour-bg svg {
+            width: 150%;
+            height: 150%;
+            animation: drift 60s linear infinite alternate;
+            transform-origin: center;
+        }
+        @keyframes drift {
+            0% { transform: translate(-5%, -5%) rotate(0deg); }
+            100% { transform: translate(0%, 0%) rotate(2deg); }
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            font-family: var(--font-display);
+            font-weight: 400;
+            line-height: 1.1;
+        }
+
+        .mono-text {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 2.5rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            transition: background-color 0.3s ease, padding 0.3s ease, border-bottom 0.3s ease;
+            border-bottom: 1px solid transparent;
+        }
+
+        nav.scrolled {
+            background-color: var(--nav-bg);
+            padding: 1.25rem 4rem;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--text-main);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            position: relative;
+        }
+        
+        .logo::after {
+            content: '';
+            position: absolute;
+            width: 52px; height: 52px;
+            border: 1px dashed var(--accent);
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: rotateStamp 20s linear infinite;
+        }
+
+        @keyframes rotateStamp {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 3.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        .nav-links a {
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Layout & Sections */
+        section {
+            padding: 8rem 4rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Fade-in Animation */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Hero */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-top: 0;
+            padding-bottom: 0;
+            position: relative;
+        }
+
+        .hero-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .hero .coordinates {
+            color: var(--accent);
+            margin-bottom: 2.5rem;
+            display: inline-block;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            background: var(--card-bg);
+        }
+
+        .hero h1 {
+            font-size: 7rem;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: 1.4rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .hero-about {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            margin-bottom: 3.5rem;
+            font-weight: 300;
+            max-width: 750px;
+            line-height: 1.8;
+        }
+
+        .cta-button {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            padding: 1.2rem 3rem;
+            border: 1px solid var(--accent);
+            color: var(--text-main);
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.05em;
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--accent);
+            z-index: -1;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.4s cubic-bezier(0.86, 0, 0.07, 1);
+        }
+
+        .cta-button:hover::before {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        .cta-button:hover {
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Section Headers */
+        .section-header {
+            margin-bottom: 5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .section-header h2 {
+            font-size: 3.5rem;
+        }
+
+        .section-header .coords {
+            color: var(--text-muted);
+        }
+
+        /* Work Section */
+        .work-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 4rem 3rem;
+        }
+
+        .work-card {
+            position: relative;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        /* Asymmetric Layout */
+        .work-card:nth-child(1) { grid-column: 1 / 8; aspect-ratio: 16/10; margin-top: 3rem;}
+        .work-card:nth-child(2) { grid-column: 8 / 13; aspect-ratio: 3/4; }
+        .work-card:nth-child(3) { grid-column: 2 / 7; aspect-ratio: 4/5; margin-top: -6rem;}
+        .work-card:nth-child(4) { grid-column: 7 / 13; aspect-ratio: 16/9; margin-top: 6rem;}
+
+        .card-img-placeholder {
+            width: 100%;
+            height: 100%;
+            background-color: #1a1a19;
+            position: absolute;
+            top: 0; left: 0;
+            transition: transform 0.6s ease, opacity 0.6s ease;
+            /* Cartographic hatch pattern instead of gradient */
+            background-image: repeating-linear-gradient(45deg, var(--border-color) 0, var(--border-color) 1px, transparent 0, transparent 8px);
+            opacity: 0.6;
+        }
+
+        .work-card:hover .card-img-placeholder {
+            transform: scale(1.05);
+            opacity: 0.2;
+        }
+
+        .card-content {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .card-label {
+            color: var(--accent);
+            display: inline-block;
+            background: var(--bg-color);
+            padding: 0.3rem 0.6rem;
+            border: 1px solid var(--border-color);
+            align-self: flex-start;
+        }
+
+        .card-info {
+            transform: translateY(20px);
+            transition: transform 0.4s ease;
+            background: var(--bg-color);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            width: 90%;
+        }
+
+        .work-card:hover .card-info {
+            transform: translateY(0);
+        }
+
+        .card-desc {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .view-project-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .view-project-btn::before {
+            content: '→';
+            color: var(--accent);
+        }
+
+        .work-card:hover .view-project-btn {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* About Section */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6rem;
+            align-items: center;
+        }
+
+        .pull-quote {
+            font-family: var(--font-display);
+            font-size: 4rem;
+            line-height: 1.15;
+            color: var(--text-main);
+            position: relative;
+        }
+
+        .pull-quote::before {
+            content: '"';
+            position: absolute;
+            top: -3rem; left: -2.5rem;
+            font-size: 8rem;
+            color: var(--accent);
+            opacity: 0.2;
+            font-family: var(--font-body);
+        }
+
+        .about-text p {
+            margin-bottom: 1.8rem;
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            line-height: 1.7;
+        }
+
+        .about-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Services Section */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2.5rem;
+        }
+
+        .service-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-top: 3px solid var(--accent);
+            padding: 3rem 2.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .service-title {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            min-height: 4.5rem;
+        }
+
+        .service-price {
+            color: var(--accent);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .service-includes {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .service-includes li {
+            margin-bottom: 1rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .service-includes li::before {
+            content: '>';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-family: var(--font-mono);
+        }
+
+        /* Contact Section */
+        .contact-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .contact-container h2 {
+            font-size: 4.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-email {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 5rem;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .contact-email:hover {
+            color: var(--text-main);
+        }
+
+        .contact-form {
+            text-align: left;
+            margin-bottom: 5rem;
+            background: var(--card-bg);
+            padding: 3rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 2.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .form-group {
+            flex: 1;
+            position: relative;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.8rem 0;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select {
+            cursor: pointer;
+        }
+
+        .form-group select option {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-bottom-color: var(--accent);
+        }
+
+        .form-group label {
+            position: absolute;
+            top: 0.8rem;
+            left: 0;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .form-group input:focus ~ label,
+        .form-group input:not(:placeholder-shown) ~ label,
+        .form-group textarea:focus ~ label,
+        .form-group textarea:not(:placeholder-shown) ~ label,
+        .form-group select:focus ~ label,
+        .form-group select:valid ~ label {
+            top: -1.2rem;
+            font-size: 0.75rem;
+            color: var(--accent);
+        }
+
+        .submit-btn {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--text-main);
+            padding: 1.2rem 3rem;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            letter-spacing: 0.05em;
+        }
+
+        .submit-btn:hover {
+            background: var(--accent);
+            color: #000;
+            font-weight: 500;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .social-links a {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            transition: color 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .social-links a::before {
+            content: '[]';
+            color: var(--accent);
+            font-size: 0.8em;
+        }
+
+        .social-links a:hover {
+            color: var(--text-main);
+        }
+
+        .location-signature {
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 2.5rem 4rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero h1 { font-size: 5rem; }
+            .pull-quote { font-size: 3rem; }
+            .about-grid { gap: 4rem; }
+            .work-card:nth-child(1), .work-card:nth-child(2), 
+            .work-card:nth-child(3), .work-card:nth-child(4) {
+                grid-column: 1 / -1;
+                margin-top: 0;
+                aspect-ratio: auto;
+                height: 450px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            nav { padding: 1.2rem 1.5rem; flex-direction: column; gap: 1rem; background: var(--nav-bg); border-bottom: 1px solid var(--border-color); }
+            nav.scrolled { padding: 1.2rem 1.5rem; }
+            .nav-links { gap: 1.5rem; font-size: 0.8rem; justify-content: center; flex-wrap: wrap; }
+            section { padding: 5rem 1.5rem; }
+            .hero h1 { font-size: 4rem; }
+            .hero-subtitle { font-size: 1.15rem; }
+            .hero-about { font-size: 1.05rem; }
+            .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+            .services-grid { grid-template-columns: 1fr; }
+            .form-row { flex-direction: column; gap: 2.5rem; }
+            .contact-form { padding: 2rem 1.5rem; }
+            .section-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .section-header h2 { font-size: 2.8rem; }
+            .social-links { flex-direction: column; gap: 1.5rem; }
+            .hero p { font-size: 1.1rem; }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 3rem; }
+            .hero-subtitle { font-size: 0.95rem; letter-spacing: 0.05em; }
+            .hero-about { font-size: 0.95rem; line-height: 1.6; }
+            .hero .coordinates { font-size: 0.75rem; padding: 0.4rem 0.8rem; margin-bottom: 2rem; }
+            .hero-content > div { flex-direction: column; width: 100%; gap: 1rem !important; }
+            .cta-button { width: 100%; text-align: center; padding: 1rem; }
+            
+            .work-card:nth-child(1), .work-card:nth-child(2), 
+            .work-card:nth-child(3), .work-card:nth-child(4) {
+                height: 320px;
+            }
+            .card-content { padding: 1.5rem; }
+            
+            .service-card { padding: 2rem 1.5rem; }
+            .contact-container h2 { font-size: 3rem; }
+            .contact-email { font-size: 1.1rem; word-break: break-all; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bg-spotlight"></div>
+
+    <!-- Topographic Background SVG -->
+    <div class="contour-bg">
+        <svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+            <g stroke="rgba(240, 238, 233, 0.15)" stroke-width="1" fill="none">
+                <path d="M-100,500 Q200,400 500,500 T1100,500" />
+                <path d="M-100,450 Q250,320 550,450 T1100,450" />
+                <path d="M-100,550 Q150,480 450,550 T1100,550" />
+                <path d="M-100,600 Q300,520 600,600 T1100,600" />
+                <path d="M-100,400 Q100,280 400,400 T1100,400" />
+                <path d="M-100,350 Q350,200 650,350 T1100,350" />
+                <path d="M200,-100 Q300,200 200,500 T200,1100" />
+                <path d="M250,-100 Q380,250 250,550 T250,1100" />
+                <path d="M150,-100 Q220,150 150,450 T150,1100" />
+                <path d="M400,200 C500,100 600,300 500,400 C400,500 300,300 400,200 Z" />
+                <path d="M380,180 C520,80 620,320 500,420 C380,520 280,320 380,180 Z" />
+                <path d="M360,160 C540,60 640,340 500,440 C360,540 260,340 360,160 Z" />
+                <path d="M700,700 C800,600 900,800 800,900 C700,1000 600,800 700,700 Z" />
+                <path d="M680,680 C820,580 920,820 800,920 C680,1020 580,820 680,680 Z" />
+            </g>
+        </svg>
+    </div>
+
+    <nav id="navbar">
+        <a href="#" class="logo">JO</a>
+        <div class="nav-links">
+            <a href="#work">WORK</a>
+            <a href="#services">SERVICES</a>
+            <a href="#contact">CONTACT</a>
+        </div>
+    </nav>
+
+    <section id="hero" class="hero fade-in">
+        <div class="hero-content">
+            <div class="mono-text coordinates">LAT -1.286389 / LON 36.817223 / NAIROBI</div>
+            <h1 class="hero-title">Joseph Omondi</h1>
+            <p class="hero-subtitle">GIS, Map Animations and Maps</p>
+            <p class="hero-about">I turn environmental data into stories people actually watch. </p>
+            <div style="display: flex; gap: 1.5rem;">
+                <a href="#work" class="cta-button">View Portfolio</a>
+                <a href="#contact" class="cta-button" style="background: transparent; border-color: var(--text-muted); color: var(--text-muted);">Request Quote</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="work" class="fade-in">
+        <div class="section-header">
+            <h2>Selected Work</h2>
+            <div class="mono-text coords">SEC:01 / PORTFOLIO</div>
+        </div>
+        <div class="work-grid">
+            <!-- Project 1 -->
+            <div class="work-card">
+                <div class="card-img-placeholder"></div>
+                <div class="card-content">
+                    <div class="mono-text card-label">01 / GIS</div>
+                    <div class="card-info">
+                        <p class="card-desc">Geospatial analysis and mapping for environmental data. QGIS &middot; ArcGIS.</p>
+                        <span class="view-project-btn">View Project</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Project 2 -->
+            <div class="work-card">
+                <div class="card-img-placeholder"></div>
+                <div class="card-content">
+                    <div class="mono-text card-label">02 / MAP ANIMATIONS</div>
+                    <div class="card-info">
+                        <p class="card-desc">Motion graphics built from real geospatial data. GEOlayers 3 &middot; After Effects.</p>
+                        <span class="view-project-btn">View Project</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Project 3 -->
+            <div class="work-card">
+                <div class="card-img-placeholder"></div>
+                <div class="card-content">
+                    <div class="mono-text card-label">03 / VIDEOS</div>
+                    <div class="card-info">
+                        <p class="card-desc">Visual storytelling and documentary-style environmental content.</p>
+                        <span class="view-project-btn">View Project</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Project 4 -->
+            <div class="work-card">
+                <div class="card-img-placeholder"></div>
+                <div class="card-content">
+                    <div class="mono-text card-label">04 / MAP EXPLAINERS</div>
+                    <div class="card-info">
+                        <p class="card-desc">Science and environmental stories told through animated cartography.</p>
+                        <span class="view-project-btn">View Project</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="services" class="fade-in">
+        <div class="section-header">
+            <h2>Services</h2>
+            <div class="mono-text coords">SEC:03 / OFFERINGS</div>
+        </div>
+        <div class="services-grid">
+            <div class="service-card">
+                <h3 class="service-title">Map Animation</h3>
+                <div class="mono-text service-price">From $70 / MIN</div>
+                <ul class="service-includes">
+                    <li>Custom geospatial motion graphics</li>
+                    <li>GEOlayers 3 & After Effects integration</li>
+                    <li>Satellite imagery storytelling</li>
+                    <li>4K render delivery</li>
+                </ul>
+            </div>
+            <div class="service-card">
+                <h3 class="service-title">Environmental Data Visualization</h3>
+                <div class="mono-text service-price">CUSTOM QUOTE</div>
+                <ul class="service-includes">
+                    <li>3D terrain rendering in Blender</li>
+                    <li>Python-based data processing</li>
+                    <li>QGIS spatial analysis</li>
+                    <li>Interactive data storytelling</li>
+                </ul>
+            </div>
+            <div class="service-card">
+                <h3 class="service-title">Map Prints</h3>
+                <div class="mono-text service-price">CUSTOM QUOTE</div>
+                <ul class="service-includes">
+                    <li>High-resolution cartographic art</li>
+                    <li>African geography & ecology focus</li>
+                    <li>Climate data representation</li>
+                    <li>Print-ready digital files</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="fade-in">
+        <div class="contact-container">
+            <h2>Get in Touch</h2>
+            <a href="mailto:josephomondi000@gmail.com" class="contact-email">josephomondi000@gmail.com</a>
+            
+            <a href="mailto:josephomondi000@gmail.com" class="contact-email">
+  josephomondi000@gmail.com
+</a>
+
+<form class="contact-form" id="contactForm"
+  action="https://docs.google.com/forms/d/e/1FAIpQLSeaiUMYn2sSbNGOzjOfc_ZbK7Az61aBCQpNaWUb-eTXp7Wlkw/formResponse"
+  method="POST"
+  target="google_form_iframe">
+
+  <div class="form-row">
+    <div class="form-group">
+      <input type="text" id="name" name="entry.953358968" placeholder=" " required>
+      <label for="name">NAME</label>
+    </div>
+
+    <div class="form-group">
+      <input type="email" id="email" name="emailAddress" placeholder=" " required>
+      <label for="email">EMAIL</label>
+    </div>
+  </div>
+
+  <div class="form-group" style="margin-bottom: 2.5rem;">
+    <select id="service" name="entry.592307558" required>
+      <option value="" disabled selected hidden></option>
+      <option value="Map Animation">Map Animation</option>
+      <option value="GIS Analysis & Static Maps">GIS Analysis & Static Maps</option>
+      <option value="Environmental Data Visualization">Environmental Data Visualization</option>
+      <option value="Other">Other</option>
+    </select>
+    <label for="service">SERVICE OF INTEREST</label>
+  </div>
+
+  <div class="form-group" style="margin-bottom: 2rem;">
+    <textarea id="brief" name="entry.1127982708" placeholder=" " required></textarea>
+    <label for="brief">PROJECT BRIEF</label>
+  </div>
+
+  <button type="submit" class="submit-btn">Request Quote</button>
+</form>
+
+<iframe
+  name="google_form_iframe"
+  style="width:100%; height:220px; border:none; margin-top:20px;">
+</iframe>
+
+            <div class="social-links">
+                <a href="https://www.linkedin.com/in/joseph-omondi000/" target="_blank">LinkedIn</a>
+                <a href="https://www.instagram.com/joe_makes_maps/" target="_blank">Instagram</a>
+                <a href="#" target="_blank">EarthOrb YouTube</a>
+            </div>
+
+            <div class="mono-text location-signature">
+                -1.286389, 36.817223
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        &copy; Joseph Omondi 2026 &middot; Environmental Visual Storyteller &middot; Nairobi, Kenya
+    </footer>
+
+    <script>
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // Intersection Observer for fade-in animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Mouse Spotlight Tracking
+        const spotlight = document.getElementById('bg-spotlight');
+        window.addEventListener('mousemove', e => {
+            spotlight.style.setProperty('--x', e.clientX + 'px');
+            spotlight.style.setProperty('--y', e.clientY + 'px');
+        });
+    </script>
+</body>
+</html>
